@@ -9,6 +9,12 @@
             src: url('DOSFont.ttf') format('truetype');
         }
 
+        :root {
+            --bg-color: #fff;
+            --text-color: #000;
+            --border-color: #000;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -16,8 +22,8 @@
         }
 
         body {
-            background-color: #fff;
-            color: #000;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             font-family: 'DOSFont', monospace;
             font-size: 18px;
             line-height: 1.4;
@@ -25,6 +31,7 @@
             min-height: 100vh;
             padding: 60px 40px;
             padding-top: 140px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         #topbar {
@@ -32,18 +39,19 @@
             top: 0;
             left: 0;
             width: 100%;
-            background-color: rgba(214, 214, 214, 0.8);
+            background-color: rgba(255, 255, 255, 0.8);
             padding: 12px 24px;
             display: flex;
             justify-content: flex-end;
             align-items: center;
             z-index: 200;
+            backdrop-filter: blur(4px);
         }
 
         #menu-btn {
             background: transparent;
-            border: 1px solid #000;
-            color: #000;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
             padding: 6px 18px;
             font-family: 'DOSFont', monospace;
             font-size: 14px;
@@ -51,8 +59,78 @@
         }
 
         #menu-btn:hover {
-            background: #000;
-            color: #fff;
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        /* Модальное окно (меню) */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 300;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal h2 {
+            font-size: 24px;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn-control {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 16px;
+            font-family: 'DOSFont', monospace;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .btn-control:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        #close-menu {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
         }
 
         #title-block {
@@ -62,7 +140,7 @@
 
         .title-line {
             border: none;
-            border-top: 2px solid #000;
+            border-top: 2px solid var(--border-color);
             margin: 20px auto;
             width: 80%;
         }
@@ -71,7 +149,7 @@
             font-size: 36px;
             font-weight: bold;
             letter-spacing: 4px;
-            color: #000;
+            color: var(--text-color);
         }
 
         #game-container {
@@ -80,16 +158,12 @@
         }
 
         .paragraph {
-            /* Выравнивание по ширине */
             text-align: justify;
-            /* Отступ между абзацами уменьшен в 2 раза: было 24px → стало 12px */
             margin-bottom: 12px;
             white-space: pre-wrap;
             min-height: 1.6em;
         }
 
-        /* Чтобы justify не слишком растягивал короткие строки в конце абзаца,
-           можно добавить hyphens, но для моноширинного шрифта лучше оставить как есть */
         .cursor {
             display: inline-block;
             animation: blink 0.8s step-end infinite;
@@ -104,6 +178,19 @@
     <div id="topbar">
         <button id="menu-btn">Меню</button>
     </div>
+
+    <!-- Затемнение и модальное окно -->
+    <div class="overlay" id="overlay">
+        <div class="modal">
+            <button id="close-menu">&times;</button>
+            <h2>Меню</h2>
+            <div class="controls">
+                <button class="btn-control" id="theme-toggle">Сменить тему (ч/б ↔ б/ч)</button>
+                <!-- Остальные кнопки (язык, музыка, громкость) пока не добавляем, чтобы не усложнять -->
+            </div>
+        </div>
+    </div>
+
     <div id="title-block">
         <hr class="title-line">
         <div id="title">JUST REMEMBER</div>
@@ -125,6 +212,45 @@
         let typingInterval = null;
         const container = document.getElementById('game-container');
 
+        // --- Логика меню ---
+        const overlay = document.getElementById('overlay');
+        const menuBtn = document.getElementById('menu-btn');
+        const closeMenuBtn = document.getElementById('close-menu');
+
+        menuBtn.addEventListener('click', () => {
+            overlay.classList.add('active');
+        });
+
+        closeMenuBtn.addEventListener('click', () => {
+            overlay.classList.remove('active');
+        });
+
+        // Закрытие по клику вне модального окна
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('active');
+            }
+        });
+
+        // --- Переключение темы ---
+        const themeToggle = document.getElementById('theme-toggle');
+        let isDark = false;
+
+        themeToggle.addEventListener('click', () => {
+            isDark = !isDark;
+            const root = document.documentElement;
+            if (isDark) {
+                root.style.setProperty('--bg-color', '#000');
+                root.style.setProperty('--text-color', '#fff');
+                root.style.setProperty('--border-color', '#fff');
+            } else {
+                root.style.setProperty('--bg-color', '#fff');
+                root.style.setProperty('--text-color', '#000');
+                root.style.setProperty('--border-color', '#000');
+            }
+        });
+
+        // --- Логика текста ---
         function typeParagraph(text) {
             isTyping = true;
 
@@ -162,6 +288,9 @@
         }
 
         document.body.addEventListener('click', () => {
+            // Не обрабатываем клик, если открыто меню
+            if (overlay.classList.contains('active')) return;
+
             if (isTyping) {
                 skipTyping();
             } else if (currentIndex < paragraphs.length) {
