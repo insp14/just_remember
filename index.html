@@ -34,6 +34,20 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(4px);
+        }
+
         #menu-btn {
             background: transparent;
             border: 1px solid var(--border-color);
@@ -171,7 +185,7 @@
             <button id="close-menu">&times;</button>
             <h2>Меню</h2>
             <div class="controls">
-                <button class="btn-control" id="theme-toggle">Сменить тему</button>
+                <button class="btn-control" id="theme-toggle">Сменить тему (ч/б ↔ б/ч)</button>
                 <!-- Остальные кнопки (язык, музыка, громкость) пока не добавляем, чтобы не усложнять -->
             </div>
         </div>
@@ -287,3 +301,4 @@
     </script>
 </body>
 </html>
+
