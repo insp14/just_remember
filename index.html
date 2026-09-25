@@ -80,11 +80,16 @@
         }
 
         .paragraph {
-            margin-bottom: 24px;
+            /* Выравнивание по ширине */
+            text-align: justify;
+            /* Отступ между абзацами уменьшен в 2 раза: было 24px → стало 12px */
+            margin-bottom: 12px;
             white-space: pre-wrap;
             min-height: 1.6em;
         }
 
+        /* Чтобы justify не слишком растягивал короткие строки в конце абзаца,
+           можно добавить hyphens, но для моноширинного шрифта лучше оставить как есть */
         .cursor {
             display: inline-block;
             animation: blink 0.8s step-end infinite;
