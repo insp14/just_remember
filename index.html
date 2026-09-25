@@ -13,6 +13,8 @@
             --bg-color: #fff;
             --text-color: #000;
             --border-color: #000;
+            --topbar-bg: rgba(255, 255, 255, 0.8);
+            --topbar-border: rgba(0, 0, 0, 0.3);
         }
 
         * {
@@ -25,7 +27,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'DOSFont', monospace;
-            font-size: 18px;
+            font-size: 20px;
             line-height: 1.4;
             cursor: pointer;
             min-height: 100vh;
@@ -39,13 +41,15 @@
             top: 0;
             left: 0;
             width: 100%;
-            background-color: rgba(255, 255, 255, 1.0);
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--topbar-border);
             padding: 12px 24px;
             display: flex;
             justify-content: flex-end;
             align-items: center;
             z-index: 200;
             backdrop-filter: blur(4px);
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         #menu-btn {
@@ -56,6 +60,7 @@
             font-family: 'DOSFont', monospace;
             font-size: 14px;
             cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
         }
 
         #menu-btn:hover {
@@ -92,12 +97,14 @@
             max-width: 400px;
             width: 90%;
             text-align: center;
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         .modal h2 {
             font-size: 24px;
             letter-spacing: 2px;
             margin-bottom: 20px;
+            color: var(--text-color);
         }
 
         .controls {
@@ -114,6 +121,7 @@
             font-family: 'DOSFont', monospace;
             font-size: 14px;
             cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
         }
 
         .btn-control:hover {
@@ -186,7 +194,6 @@
             <h2>Меню</h2>
             <div class="controls">
                 <button class="btn-control" id="theme-toggle">Сменить тему (ч/б ↔ б/ч)</button>
-                <!-- Остальные кнопки (язык, музыка, громкость) пока не добавляем, чтобы не усложнять -->
             </div>
         </div>
     </div>
@@ -225,7 +232,6 @@
             overlay.classList.remove('active');
         });
 
-        // Закрытие по клику вне модального окна
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
                 overlay.classList.remove('active');
@@ -243,10 +249,15 @@
                 root.style.setProperty('--bg-color', '#000');
                 root.style.setProperty('--text-color', '#fff');
                 root.style.setProperty('--border-color', '#fff');
+                // Подбираем полупрозрачный чёрный фон для шапки на тёмной теме
+                root.style.setProperty('--topbar-bg', 'rgba(0, 0, 0, 0.7)');
+                root.style.setProperty('--topbar-border', 'rgba(255, 255, 255, 0.3)');
             } else {
                 root.style.setProperty('--bg-color', '#fff');
                 root.style.setProperty('--text-color', '#000');
                 root.style.setProperty('--border-color', '#000');
+                root.style.setProperty('--topbar-bg', 'rgba(255, 255, 255, 0.8)');
+                root.style.setProperty('--topbar-border', 'rgba(0, 0, 0, 0.3)');
             }
         });
 
@@ -301,4 +312,3 @@
     </script>
 </body>
 </html>
-
