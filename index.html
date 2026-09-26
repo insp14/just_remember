@@ -297,262 +297,264 @@
     </audio>
 
     <script>
-        // --- Структура сюжета ---
-        const paragraphs = [
-            "Просто представьте: вы скитаетесь по пустому бесконечному пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
-            "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
-            "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
-            "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
-            "Все дальнейшие похождения – просто привычка. Любые чувства, эмоции притупились максимально. Ни страха, ни сожаления, ни радости, ни удовлетворения. Это испытание, которое уже, казалось, было провалено.",
-            "После пройденных миллионов километров по пустоте, Вы обнаруживаете выделяющееся, непохожее ни на что… (???). Вы когда-нибудь видели это?",
-            "Прошло столько времени, пропало какое-либо понимание происходящего, возникает лишь два вопроса: прикоснуться или опровергнуть? Погубит или поможет? Спасет или потревожит?",
-            "Появляется выбор, которого не было тогда, когда он был так важен. Прикосновение в ситуации с затупленными чувствами тактильности не вызывает ни капли сомнения, страха, вообще ничего.",
-            // Первая развилка
-            {
-                type: "choice",
-                options: [
-                    {
-                        label: "Прикоснуться",
-                        result: [
-                            "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги."
-                        ]
-                    },
-                    {
-                        label: "Отвергнуть",
-                        result: [
-                            "Нет. Вы больше не верите. Все угасло уже очень давно. Вы не хотите возвращаться к этому. Но что-то или кто-то с Вами не согласен и Вы чувствуете резкий толчок позади себя...",
-                            "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги."
-                        ]
-                    }
-                ]
-            }
-        ];
-
-        let currentIndex = 0;
-        let isTyping = false;
-        let typingInterval = null;
-        let choiceMade = false;
-        let pendingResult = null;
-        let currentTypingText = '';
-        const container = document.getElementById('game-container');
-
-        // --- Точка отката ---
-        let rollbackCheckpoint = null;  // { choiceIndex, containerChildCount }
-        const rollbackBtn = document.getElementById('rollback-btn');
-
-        // --- Логика меню ---
-        const overlay = document.getElementById('overlay');
-        const menuBtn = document.getElementById('menu-btn');
-        const closeMenuBtn = document.getElementById('close-menu');
-
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            overlay.classList.add('active');
-        });
-
-        closeMenuBtn.addEventListener('click', () => {
-            overlay.classList.remove('active');
-        });
-
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.classList.remove('active');
-            }
-        });
-
-        // --- Переключение темы ---
-        const themeToggle = document.getElementById('theme-toggle');
-        let isDark = false;
-
-        themeToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            isDark = !isDark;
-            const root = document.documentElement;
-            if (isDark) {
-                root.style.setProperty('--bg-color', '#000');
-                root.style.setProperty('--text-color', '#fff');
-                root.style.setProperty('--border-color', '#fff');
-                root.style.setProperty('--topbar-bg', 'rgba(0, 0, 0, 0.7)');
-                root.style.setProperty('--topbar-border', 'rgba(255, 255, 255, 0.3)');
-            } else {
-                root.style.setProperty('--bg-color', '#fff');
-                root.style.setProperty('--text-color', '#000');
-                root.style.setProperty('--border-color', '#000');
-                root.style.setProperty('--topbar-bg', 'rgba(255, 255, 255, 0.8)');
-                root.style.setProperty('--topbar-border', 'rgba(0, 0, 0, 0.3)');
-            }
-        });
-
-        // --- Логика отката ---
-        rollbackBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (!rollbackCheckpoint) return;
-
-            // Останавливаем печать, если идёт
-            if (isTyping) {
-                clearInterval(typingInterval);
-                isTyping = false;
-            }
-
-            // Очищаем очередь результатов выбора
-            pendingResult = null;
-            choiceMade = false;
-
-            // Удаляем все элементы после чекпоинта
-            const keepCount = rollbackCheckpoint.containerChildCount;
-            while (container.children.length > keepCount) {
-                container.removeChild(container.lastChild);
-            }
-
-            // Возвращаем currentIndex к точке выбора
-            currentIndex = rollbackCheckpoint.choiceIndex;
-
-            // Заново показываем кнопки выбора
-            const choiceObj = paragraphs[currentIndex];
-            showChoice(choiceObj);
-
-            // Закрываем меню
-            overlay.classList.remove('active');
-        });
-
-        // --- Логика музыки ---
-        const bgMusic = document.getElementById('bg-music');
-        const musicToggle = document.getElementById('music-toggle');
-        const volumeSlider = document.getElementById('volume-slider');
-        let musicPlaying = false;
-
-        bgMusic.volume = 0.5;
-
-        musicToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (musicPlaying) {
-                bgMusic.pause();
-                musicPlaying = false;
-                musicToggle.textContent = 'Музыка: выкл';
-            } else {
-                bgMusic.play().catch(err => console.log('Воспроизведение заблокировано браузером'));
-                musicPlaying = true;
-                musicToggle.textContent = 'Музыка: вкл';
-            }
-        });
-
-        volumeSlider.addEventListener('input', (e) => {
-            e.stopPropagation();
-            bgMusic.volume = volumeSlider.value / 100;
-        });
-
-        document.querySelector('.modal').addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
-        // --- Логика текста ---
-        function typeParagraph(text) {
-            isTyping = true;
-
-            const p = document.createElement('div');
-            p.className = 'paragraph';
-            const cursor = document.createElement('span');
-            cursor.className = 'cursor';
-            cursor.textContent = '_';
-            p.appendChild(cursor);
-            container.appendChild(p);
-
-            let charIndex = 0;
-            const speed = 30;
-
-            typingInterval = setInterval(() => {
-                if (charIndex < text.length) {
-                    const char = document.createTextNode(text[charIndex]);
-                    p.insertBefore(char, cursor);
-                    charIndex++;
-                } else {
-                    clearInterval(typingInterval);
-                    cursor.remove();
-                    isTyping = false;
+    // --- Структура сюжета ---
+    const paragraphs = [
+        "Просто представьте: вы скитаетесь по пустому бесконечному пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
+        "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
+        "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
+        "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
+        "Все дальнейшие похождения – просто привычка. Любые чувства, эмоции притупились максимально. Ни страха, ни сожаления, ни радости, ни удовлетворения. Это испытание, которое уже, казалось, было провалено.",
+        "После пройденных миллионов километров по пустоте, Вы обнаруживаете выделяющееся, непохожее ни на что… (???). Вы когда-нибудь видели это?",
+        "Прошло столько времени, пропало какое-либо понимание происходящего, возникает лишь два вопроса: прикоснуться или опровергнуть? Погубит или поможет? Спасет или потревожит?",
+        "Появляется выбор, которого не было тогда, когда он был так важен. Прикосновение в ситуации с затупленными чувствами тактильности не вызывает ни капли сомнения, страха, вообще ничего.",
+        // Первая развилка
+        {
+            type: "choice",
+            options: [
+                {
+                    label: "Прикоснуться",
+                    result: [
+                        "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги."
+                    ]
+                },
+                {
+                    label: "Отвергнуть",
+                    result: [
+                        "Нет. Вы больше не верите. Все угасло уже очень давно. Вы не хотите возвращаться к этому. Но что-то или кто-то с Вами не согласен и Вы чувствуете резкий толчок позади себя...",
+                        "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги."
+                    ]
                 }
-            }, speed);
+            ]
         }
+    ];
 
-        function skipTyping() {
+    let currentIndex = 0;
+    let isTyping = false;
+    let typingInterval = null;
+    let choiceMade = false;
+    let pendingResult = null;
+    let currentTypingText = '';
+    let isChoiceVisible = false; // Флаг: видны ли сейчас кнопки выбора
+    const container = document.getElementById('game-container');
+
+    // --- Точка отката ---
+    let rollbackCheckpoint = null;
+    const rollbackBtn = document.getElementById('rollback-btn');
+
+    // --- Логика меню ---
+    const overlay = document.getElementById('overlay');
+    const menuBtn = document.getElementById('menu-btn');
+    const closeMenuBtn = document.getElementById('close-menu');
+
+    menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        overlay.classList.add('active');
+    });
+
+    closeMenuBtn.addEventListener('click', () => {
+        overlay.classList.remove('active');
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('active');
+        }
+    });
+
+    // --- Переключение темы ---
+    const themeToggle = document.getElementById('theme-toggle');
+    let isDark = false;
+
+    themeToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        isDark = !isDark;
+        const root = document.documentElement;
+        if (isDark) {
+            root.style.setProperty('--bg-color', '#000');
+            root.style.setProperty('--text-color', '#fff');
+            root.style.setProperty('--border-color', '#fff');
+            root.style.setProperty('--topbar-bg', 'rgba(0, 0, 0, 0.7)');
+            root.style.setProperty('--topbar-border', 'rgba(255, 255, 255, 0.3)');
+        } else {
+            root.style.setProperty('--bg-color', '#fff');
+            root.style.setProperty('--text-color', '#000');
+            root.style.setProperty('--border-color', '#000');
+            root.style.setProperty('--topbar-bg', 'rgba(255, 255, 255, 0.8)');
+            root.style.setProperty('--topbar-border', 'rgba(0, 0, 0, 0.3)');
+        }
+    });
+
+    // --- Логика отката ---
+    rollbackBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!rollbackCheckpoint) return;
+
+        if (isTyping) {
             clearInterval(typingInterval);
-            const lastP = container.lastElementChild;
-            if (lastP && lastP.classList.contains('paragraph')) {
-                lastP.textContent = currentTypingText;
-            }
             isTyping = false;
         }
 
-        function typeParagraphTracked(text) {
-            currentTypingText = text;
-            typeParagraph(text);
+        pendingResult = null;
+        choiceMade = false;
+        isChoiceVisible = false; // Сбрасываем флаг видимости кнопок
+
+        const keepCount = rollbackCheckpoint.containerChildCount;
+        while (container.children.length > keepCount) {
+            container.removeChild(container.lastChild);
         }
 
-        // --- Отрисовка кнопок выбора ---
-        function showChoice(choiceObj) {
-            // Сохраняем точку отката: сколько элементов в контейнере сейчас
-            // и индекс самого выбора в массиве
-            rollbackCheckpoint = {
-                choiceIndex: currentIndex,
-                containerChildCount: container.children.length
-            };
-            rollbackBtn.disabled = false;
+        currentIndex = rollbackCheckpoint.choiceIndex;
 
-            const choiceBlock = document.createElement('div');
-            choiceBlock.className = 'choice-block';
+        // Явно перерисовываем кнопки выбора
+        const choiceObj = paragraphs[currentIndex];
+        showChoice(choiceObj);
 
-            choiceObj.options.forEach((option) => {
-                const btn = document.createElement('button');
-                btn.className = 'choice-btn';
-                btn.textContent = option.label;
+        overlay.classList.remove('active');
+    });
 
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (choiceMade) return;
-                    choiceMade = true;
+    // --- Логика музыки ---
+    const bgMusic = document.getElementById('bg-music');
+    const musicToggle = document.getElementById('music-toggle');
+    const volumeSlider = document.getElementById('volume-slider');
+    let musicPlaying = false;
 
-                    // Удаляем кнопки
-                    choiceBlock.remove();
+    bgMusic.volume = 0.5;
 
-                    // Ставим в очередь результаты выбранного пути
-                    pendingResult = option.result.slice();
-                    // Сразу выводим первый абзац
-                    const firstText = pendingResult.shift();
-                    typeParagraphTracked(firstText);
-                });
+    musicToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (musicPlaying) {
+            bgMusic.pause();
+            musicPlaying = false;
+            musicToggle.textContent = 'Музыка: выкл';
+        } else {
+            bgMusic.play().catch(err => console.log('Воспроизведение заблокировано браузером'));
+            musicPlaying = true;
+            musicToggle.textContent = 'Музыка: вкл';
+        }
+    });
 
-                choiceBlock.appendChild(btn);
+    volumeSlider.addEventListener('input', (e) => {
+        e.stopPropagation();
+        bgMusic.volume = volumeSlider.value / 100;
+    });
+
+    document.querySelector('.modal').addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // --- Логика текста ---
+    function typeParagraph(text) {
+        isTyping = true;
+
+        const p = document.createElement('div');
+        p.className = 'paragraph';
+        const cursor = document.createElement('span');
+        cursor.className = 'cursor';
+        cursor.textContent = '_';
+        p.appendChild(cursor);
+        container.appendChild(p);
+
+        let charIndex = 0;
+        const speed = 30;
+
+        typingInterval = setInterval(() => {
+            if (charIndex < text.length) {
+                const char = document.createTextNode(text[charIndex]);
+                p.insertBefore(char, cursor);
+                charIndex++;
+            } else {
+                clearInterval(typingInterval);
+                cursor.remove();
+                isTyping = false;
+            }
+        }, speed);
+    }
+
+    function skipTyping() {
+        clearInterval(typingInterval);
+        const lastP = container.lastElementChild;
+        if (lastP && lastP.classList.contains('paragraph')) {
+            lastP.textContent = currentTypingText;
+        }
+        isTyping = false;
+    }
+
+    function typeParagraphTracked(text) {
+        currentTypingText = text;
+        typeParagraph(text);
+    }
+
+    // --- Отрисовка кнопок выбора ---
+    function showChoice(choiceObj) {
+        rollbackCheckpoint = {
+            choiceIndex: currentIndex,
+            containerChildCount: container.children.length
+        };
+        rollbackBtn.disabled = false;
+        
+        isChoiceVisible = true; // Устанавливаем флаг: кнопки на экране
+
+        const choiceBlock = document.createElement('div');
+        choiceBlock.className = 'choice-block';
+
+        choiceObj.options.forEach((option) => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = option.label;
+
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (choiceMade) return;
+                choiceMade = true;
+                isChoiceVisible = false; // Снимаем флаг: кнопки исчезают
+
+                choiceBlock.remove();
+                pendingResult = option.result.slice();
+                const firstText = pendingResult.shift();
+                typeParagraphTracked(firstText);
             });
 
-            container.appendChild(choiceBlock);
+            choiceBlock.appendChild(btn);
+        });
+
+        container.appendChild(choiceBlock);
+    }
+
+    // --- Обработка клика по экрану ---
+    document.body.addEventListener('click', () => {
+        if (overlay.classList.contains('active')) return;
+
+        // ГЛАВНОЕ ИСПРАВЛЕНИЕ:
+        // Если кнопки выбора уже видны, клик по фону ничего не делает.
+        // Это предотвращает дублирование кнопок и рассинхронизацию индексов.
+        if (isChoiceVisible) return;
+
+        if (isTyping) {
+            skipTyping();
+            return;
         }
 
-        // --- Обработка клика по экрану ---
-        document.body.addEventListener('click', () => {
-            if (overlay.classList.contains('active')) return;
+        if (pendingResult && pendingResult.length > 0) {
+            const nextText = pendingResult.shift();
+            typeParagraphTracked(nextText);
+            return;
+        }
 
-            if (isTyping) {
-                skipTyping();
-                return;
+        if (currentIndex < paragraphs.length) {
+            const item = paragraphs[currentIndex];
+
+            if (typeof item === 'string') {
+                typeParagraphTracked(item);
+                currentIndex++;
+            } else if (item.type === 'choice') {
+                // Эта ветка сработает только при линейном прохождении,
+                // так как при откате мы ставим isChoiceVisible = true,
+                // и этот блок будет пропущен благодаря проверке в начале функции.
+                showChoice(item);
+                currentIndex++;
             }
-
-            if (pendingResult && pendingResult.length > 0) {
-                const nextText = pendingResult.shift();
-                typeParagraphTracked(nextText);
-                return;
-            }
-
-            if (currentIndex < paragraphs.length) {
-                const item = paragraphs[currentIndex];
-
-                if (typeof item === 'string') {
-                    typeParagraphTracked(item);
-                    currentIndex++;
-                } else if (item.type === 'choice') {
-                    showChoice(item);
-                    currentIndex++;
-                }
-            }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>
