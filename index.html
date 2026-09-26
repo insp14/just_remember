@@ -299,12 +299,10 @@
     </div>
     <div id="game-container"></div>
 
-    <!-- Аудио-элемент для эмбиента -->
     <audio id="bg-music" loop preload="auto">
         <source src="ambient.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- Аудио-элемент для звука клика -->
     <audio id="click-sound" preload="auto">
         <source src="click.mp3" type="audio/mpeg">
     </audio>
@@ -312,7 +310,7 @@
     <script>
         // --- Структура сюжета ---
         const paragraphs = [
-            "Просто представьте: вы скитаетесь по пустому бесконечному пространству с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
+            "Просто представьте: вы скитаетесь по пустому бесконечном пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
             "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
             "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
             "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
@@ -320,7 +318,6 @@
             "После пройденных миллионов километров по пустоте, Вы обнаруживаете выделяющееся, непохожее ни на что… (???). Вы когда-нибудь видели это?",
             "Прошло столько времени, пропало какое-либо понимание происходящего, возникает лишь два вопроса: прикоснуться или опровергнуть? Погубит или поможет? Спасет или потревожит?",
             "Появляется выбор, которого не было тогда, когда он был так важен. Прикосновение в ситуации с затупленными чувствами тактильности не вызывает ни капли сомнения, страха, вообще ничего.",
-            // Первая развилка
             {
                 type: "choice",
                 options: [
@@ -350,11 +347,9 @@
         let isChoiceVisible = false;
         const container = document.getElementById('game-container');
 
-        // --- Точка отката ---
         let rollbackCheckpoint = null;
         const rollbackBtn = document.getElementById('rollback-btn');
 
-        // --- Аудио-элементы ---
         const bgMusic = document.getElementById('bg-music');
         const clickSound = document.getElementById('click-sound');
         const musicToggle = document.getElementById('music-toggle');
@@ -392,28 +387,22 @@
             }
         });
 
-        // --- Окно «Об игре» (единоразовый показ) ---
+        // --- Окно «Об игре» (показ при каждом открытии) ---
         const introOverlay = document.getElementById('intro-overlay');
         const introCloseBtn = document.getElementById('intro-close');
 
-        if (!localStorage.getItem('just_remember_intro_shown')) {
-            setTimeout(() => {
-                introOverlay.classList.add('active');
-            }, 500);
-        } else {
-            introOverlay.style.display = 'none';
-        }
+        setTimeout(() => {
+            introOverlay.classList.add('active');
+        }, 500);
 
         introCloseBtn.addEventListener('click', () => {
             playClick();
-            localStorage.setItem('just_remember_intro_shown', 'true');
             introOverlay.classList.remove('active');
         });
 
         introOverlay.addEventListener('click', (e) => {
             if (e.target === introOverlay) {
                 playClick();
-                localStorage.setItem('just_remember_intro_shown', 'true');
                 introOverlay.classList.remove('active');
             }
         });
@@ -502,7 +491,6 @@
         // --- Логика текста ---
         function typeParagraph(text) {
             isTyping = true;
-
             const p = document.createElement('div');
             p.className = 'paragraph';
             const cursor = document.createElement('span');
@@ -510,10 +498,8 @@
             cursor.textContent = '_';
             p.appendChild(cursor);
             container.appendChild(p);
-
             let charIndex = 0;
             const speed = 30;
-
             typingInterval = setInterval(() => {
                 if (charIndex < text.length) {
                     const char = document.createTextNode(text[charIndex]);
@@ -547,38 +533,29 @@
                 choiceIndex: currentIndex,
                 containerChildCount: container.children.length
             };
-
             if (enableRollback) {
                 rollbackBtn.disabled = false;
             }
-
             isChoiceVisible = true;
-
             const choiceBlock = document.createElement('div');
             choiceBlock.className = 'choice-block';
-
-            choiceObj.options.forEach((option, optIndex) => {
+            choiceObj.options.forEach((option) => {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
                 btn.textContent = option.label;
-
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (choiceMade) return;
                     choiceMade = true;
                     isChoiceVisible = false;
-
                     playClick();
-
                     choiceBlock.remove();
                     pendingResult = option.result.slice();
                     const firstText = pendingResult.shift();
                     typeParagraphTracked(firstText);
                 });
-
                 choiceBlock.appendChild(btn);
             });
-
             container.appendChild(choiceBlock);
         }
 
@@ -586,23 +563,18 @@
         document.body.addEventListener('click', () => {
             if (overlay.classList.contains('active')) return;
             if (introOverlay.classList.contains('active')) return;
-
             if (isChoiceVisible) return;
-
             if (isTyping) {
                 skipTyping();
                 return;
             }
-
             if (pendingResult && pendingResult.length > 0) {
                 const nextText = pendingResult.shift();
                 typeParagraphTracked(nextText);
                 return;
             }
-
             if (currentIndex < paragraphs.length) {
                 const item = paragraphs[currentIndex];
-
                 if (typeof item === 'string') {
                     typeParagraphTracked(item);
                     currentIndex++;
