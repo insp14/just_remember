@@ -337,7 +337,7 @@
         const container = document.getElementById('game-container');
 
         // --- Точка отката ---
-        let rollbackCheckpoint = null;  // { choiceIndex, containerChildCount }
+        let rollbackCheckpoint = null;
         const rollbackBtn = document.getElementById('rollback-btn');
 
         // --- Логика меню ---
@@ -383,35 +383,33 @@
             }
         });
 
-        // --- Логика отката ---
+        // --- Логика отката (ИСПРАВЛЕННАЯ ПОД ТВОЮ ЗАДАЧУ) ---
         rollbackBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!rollbackCheckpoint) return;
 
-            // Останавливаем печать, если идёт
+            // ГЛАВНОЕ ИЗМЕНЕНИЕ: Блокируем кнопку сразу после нажатия.
+            // Теперь её нельзя нажать дважды подряд в рамках одного выбора.
+            rollbackBtn.disabled = true;
+
             if (isTyping) {
                 clearInterval(typingInterval);
                 isTyping = false;
             }
 
-            // Очищаем очередь результатов выбора
             pendingResult = null;
             choiceMade = false;
 
-            // Удаляем все элементы после чекпоинта
             const keepCount = rollbackCheckpoint.containerChildCount;
             while (container.children.length > keepCount) {
                 container.removeChild(container.lastChild);
             }
 
-            // Возвращаем currentIndex к точке выбора
             currentIndex = rollbackCheckpoint.choiceIndex;
 
-            // Заново показываем кнопки выбора
             const choiceObj = paragraphs[currentIndex];
             showChoice(choiceObj);
 
-            // Закрываем меню
             overlay.classList.remove('active');
         });
 
@@ -489,12 +487,13 @@
 
         // --- Отрисовка кнопок выбора ---
         function showChoice(choiceObj) {
-            // Сохраняем точку отката: сколько элементов в контейнере сейчас
-            // и индекс самого выбора в массиве
             rollbackCheckpoint = {
                 choiceIndex: currentIndex,
                 containerChildCount: container.children.length
             };
+            
+            // ГЛАВНОЕ ИЗМЕНЕНИЕ: Активируем кнопку отката только когда появляется новый выбор.
+            // Это гарантирует, что кнопка будет работать ровно один раз для текущей развилки.
             rollbackBtn.disabled = false;
 
             const choiceBlock = document.createElement('div');
@@ -510,12 +509,8 @@
                     if (choiceMade) return;
                     choiceMade = true;
 
-                    // Удаляем кнопки
                     choiceBlock.remove();
-
-                    // Ставим в очередь результаты выбранного пути
                     pendingResult = option.result.slice();
-                    // Сразу выводим первый абзац
                     const firstText = pendingResult.shift();
                     typeParagraphTracked(firstText);
                 });
@@ -556,4 +551,3 @@
     </script>
 </body>
 </html>
-
