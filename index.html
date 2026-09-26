@@ -296,10 +296,16 @@
         <source src="ambient.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- Аудио-элемент для звука клика -->
+    <!-- Замени src на имя своего файла, например "click.mp3" -->
+    <audio id="click-sound" preload="auto">
+        <source src="click.mp3" type="audio/mpeg">
+    </audio>
+
     <script>
         // --- Структура сюжета ---
         const paragraphs = [
-            "Просто представьте: вы скитаетесь по пустому бесконечному пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
+            "Просто представьте: вы скитаетесь по пустому бесконечном пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
             "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
             "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
             "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
@@ -334,12 +340,30 @@
         let choiceMade = false;
         let pendingResult = null;
         let currentTypingText = '';
-        let isChoiceVisible = false;  // Видны ли сейчас кнопки выбора
+        let isChoiceVisible = false;
         const container = document.getElementById('game-container');
 
         // --- Точка отката ---
         let rollbackCheckpoint = null;
         const rollbackBtn = document.getElementById('rollback-btn');
+
+        // --- Аудио-элементы ---
+        const bgMusic = document.getElementById('bg-music');
+        const clickSound = document.getElementById('click-sound');
+        const musicToggle = document.getElementById('music-toggle');
+        const volumeSlider = document.getElementById('volume-slider');
+        let musicPlaying = false;
+
+        // Устанавливаем начальную громкость для обоих звуков
+        bgMusic.volume = 0.5;
+        clickSound.volume = 0.5;
+
+        // --- Функция воспроизведения звука клика ---
+        function playClick() {
+            if (!musicPlaying) return; // Если звук выключен — не играем
+            clickSound.currentTime = 0; // Сбрасываем к началу для быстрого повторного клика
+            clickSound.play().catch(() => {});
+        }
 
         // --- Логика меню ---
         const overlay = document.getElementById('overlay');
@@ -348,10 +372,12 @@
 
         menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            playClick();
             overlay.classList.add('active');
         });
 
         closeMenuBtn.addEventListener('click', () => {
+            playClick();
             overlay.classList.remove('active');
         });
 
@@ -367,6 +393,7 @@
 
         themeToggle.addEventListener('click', (e) => {
             e.stopPropagation();
+            playClick();
             isDark = !isDark;
             const root = document.documentElement;
             if (isDark) {
@@ -389,7 +416,7 @@
             e.stopPropagation();
             if (!rollbackCheckpoint) return;
 
-            // Блокируем кнопку — повторный откат к этому же выбору невозможен
+            playClick();
             rollbackBtn.disabled = true;
 
             if (isTyping) {
@@ -400,36 +427,25 @@
             pendingResult = null;
             choiceMade = false;
 
-            // Удаляем все элементы после чекпоинта
             const keepCount = rollbackCheckpoint.containerChildCount;
             while (container.children.length > keepCount) {
                 container.removeChild(container.lastChild);
             }
 
-            // Возвращаем currentIndex к точке выбора
             currentIndex = rollbackCheckpoint.choiceIndex;
 
-            // Перерисовываем кнопки (БЕЗ активации кнопки отката)
             const choiceObj = paragraphs[currentIndex];
             showChoice(choiceObj, false);
 
-            // Важно: увеличиваем currentIndex, как при нормальном прохождении,
-            // чтобы глобальный клик не попытался показать выбор повторно
             currentIndex++;
 
             overlay.classList.remove('active');
         });
 
-        // --- Логика музыки ---
-        const bgMusic = document.getElementById('bg-music');
-        const musicToggle = document.getElementById('music-toggle');
-        const volumeSlider = document.getElementById('volume-slider');
-        let musicPlaying = false;
-
-        bgMusic.volume = 0.5;
-
+        // --- Логика музыки и звука ---
         musicToggle.addEventListener('click', (e) => {
             e.stopPropagation();
+            playClick();
             if (musicPlaying) {
                 bgMusic.pause();
                 musicPlaying = false;
@@ -443,7 +459,9 @@
 
         volumeSlider.addEventListener('input', (e) => {
             e.stopPropagation();
-            bgMusic.volume = volumeSlider.value / 100;
+            const vol = volumeSlider.value / 100;
+            bgMusic.volume = vol;
+            clickSound.volume = vol; // Ползунок управляет обоими звуками
         });
 
         document.querySelector('.modal').addEventListener('click', (e) => {
@@ -493,16 +511,12 @@
         }
 
         // --- Отрисовка кнопок выбора ---
-        // Параметр enableRollback: true — новый выбор (активируем кнопку отката),
-        // false — откат (НЕ активируем, чтобы нельзя было нажать дважды)
         function showChoice(choiceObj, enableRollback) {
-            // Сохраняем чекпоинт
             rollbackCheckpoint = {
                 choiceIndex: currentIndex,
                 containerChildCount: container.children.length
             };
 
-            // Активируем кнопку отката только при новом выборе, не при откате
             if (enableRollback) {
                 rollbackBtn.disabled = false;
             }
@@ -523,12 +537,10 @@
                     choiceMade = true;
                     isChoiceVisible = false;
 
-                    // Удаляем кнопки
-                    choiceBlock.remove();
+                    playClick(); // Звук при нажатии на кнопку выбора
 
-                    // Ставим в очередь результаты выбранного пути
+                    choiceBlock.remove();
                     pendingResult = option.result.slice();
-                    // Сразу выводим первый абзац
                     const firstText = pendingResult.shift();
                     typeParagraphTracked(firstText);
                 });
@@ -542,32 +554,26 @@
         // --- Обработка клика по экрану ---
         document.body.addEventListener('click', () => {
             if (overlay.classList.contains('active')) return;
-
-            // Если кнопки выбора уже на экране — клик по фону ничего не делает
             if (isChoiceVisible) return;
 
-            // Если идёт печать — пропускаем
             if (isTyping) {
                 skipTyping();
                 return;
             }
 
-            // Если есть текст в очереди после выбора — выводим следующий
             if (pendingResult && pendingResult.length > 0) {
                 const nextText = pendingResult.shift();
                 typeParagraphTracked(nextText);
                 return;
             }
 
-            // Обычный линейный вывод
             if (currentIndex < paragraphs.length) {
                 const item = paragraphs[currentIndex];
 
                 if (typeof item === 'string') {
                     typeParagraphTracked(item);
                     currentIndex++;
-                } else if (item.type === 'choice') {
-                    // Новый выбор — активируем кнопку отката
+                } else if (item.type === "choice") {
                     showChoice(item, true);
                     currentIndex++;
                 }
