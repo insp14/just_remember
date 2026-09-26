@@ -264,7 +264,6 @@
         <button id="menu-btn">Меню</button>
     </div>
 
-    <!-- Затемнение и модальное окно (МЕНЮ) -->
     <div class="overlay" id="overlay">
         <div class="modal">
             <button id="close-menu">&times;</button>
@@ -281,7 +280,6 @@
         </div>
     </div>
 
-    <!-- Затемнение и модальное окно (ОБ ИГРЕ) -->
     <div class="overlay" id="intro-overlay">
         <div class="modal">
             <h2>Об игре</h2>
@@ -308,7 +306,7 @@
     </audio>
 
     <script>
-        // --- Общий текст для обеих веток ---
+        // --- Общий текст для обеих веток первого выбора ---
         const commonText = [
             "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги.",
             "Вы быстро оглядываетесь по сторонам, словно чувства начинают к Вам возвращаться, и эти чувства – это страх, растерянность, непонимание. Вы боитесь – но это уже хоть что-то, что-то такое, что Вы так давно потеряли – эмоции.",
@@ -347,6 +345,7 @@
             "Прошло столько времени, пропало какое-либо понимание происходящего, возникает лишь два вопроса: прикоснуться или опровергнуть? Погубит или поможет? Спасет или потревожит?",
             "Появляется выбор, которого не было тогда, когда он был так важен. Прикосновение в ситуации с затупленными чувствами тактильности не вызывает ни капли сомнения, страха, вообще ничего.",
             {
+                // Первый выбор
                 type: "choice",
                 options: [
                     {
@@ -358,6 +357,24 @@
                         result: [
                             "Нет. Вы больше не верите. Все угасло уже очень давно. Вы не хотите возвращаться к этому. Но что-то или кто-то с Вами не согласен и Вы чувствуете резкий толчок позади себя...",
                             ...commonText
+                        ]
+                    }
+                ]
+            },
+            {
+                // Второй выбор (после общего текста)
+                type: "choice",
+                options: [
+                    {
+                        label: "Нажать",
+                        result: [
+                            // Сюжетный текст будет добавлен позже
+                        ]
+                    },
+                    {
+                        label: "Не нажимать",
+                        result: [
+                            // Сюжетный текст будет добавлен позже
                         ]
                     }
                 ]
@@ -391,7 +408,6 @@
             clickSound.play().catch(() => {});
         }
 
-        // --- Логика меню ---
         const overlay = document.getElementById('overlay');
         const menuBtn = document.getElementById('menu-btn');
         const closeMenuBtn = document.getElementById('close-menu');
@@ -413,7 +429,6 @@
             }
         });
 
-        // --- Окно «Об игре» (показ при каждом открытии) ---
         const introOverlay = document.getElementById('intro-overlay');
         const introCloseBtn = document.getElementById('intro-close');
 
@@ -437,7 +452,6 @@
             e.stopPropagation();
         });
 
-        // --- Переключение темы ---
         const themeToggle = document.getElementById('theme-toggle');
         let isDark = false;
 
@@ -461,7 +475,6 @@
             }
         });
 
-        // --- Логика отката ---
         rollbackBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!rollbackCheckpoint) return;
@@ -492,7 +505,6 @@
             overlay.classList.remove('active');
         });
 
-        // --- Логика музыки и звука ---
         musicToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             playClick();
@@ -514,7 +526,6 @@
             clickSound.volume = vol;
         });
 
-        // --- Логика текста ---
         function typeParagraph(text) {
             isTyping = true;
             const p = document.createElement('div');
@@ -553,7 +564,6 @@
             typeParagraph(text);
         }
 
-        // --- Отрисовка кнопок выбора ---
         function showChoice(choiceObj, enableRollback) {
             rollbackCheckpoint = {
                 choiceIndex: currentIndex,
@@ -577,15 +587,16 @@
                     playClick();
                     choiceBlock.remove();
                     pendingResult = option.result.slice();
-                    const firstText = pendingResult.shift();
-                    typeParagraphTracked(firstText);
+                    if (pendingResult.length > 0) {
+                        const firstText = pendingResult.shift();
+                        typeParagraphTracked(firstText);
+                    }
                 });
                 choiceBlock.appendChild(btn);
             });
             container.appendChild(choiceBlock);
         }
 
-        // --- Обработка клика по экрану ---
         document.body.addEventListener('click', () => {
             if (overlay.classList.contains('active')) return;
             if (introOverlay.classList.contains('active')) return;
