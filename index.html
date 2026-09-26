@@ -129,6 +129,16 @@
             color: var(--bg-color);
         }
 
+        .btn-control:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .btn-control:disabled:hover {
+            background: transparent;
+            color: var(--text-color);
+        }
+
         #close-menu {
             position: absolute;
             top: 12px;
@@ -263,7 +273,8 @@
             <button id="close-menu">&times;</button>
             <h2>Меню</h2>
             <div class="controls">
-                <button class="btn-control" id="theme-toggle">Сменить тему (ч/б ↔ б/ч)</button>
+                <button class="btn-control" id="theme-toggle">Сменить тему</button>
+                <button class="btn-control" id="rollback-btn" disabled>Откатиться к выбору</button>
                 <button class="btn-control" id="music-toggle">Музыка: выкл</button>
                 <div class="music-control">
                     <label for="volume-slider">Громкость</label>
@@ -287,10 +298,8 @@
 
     <script>
         // --- Структура сюжета ---
-        // Обычные строки — линейные абзацы
-        // Объект с type: "choice" — точка развилки
         const paragraphs = [
-            "Просто представьте: вы скитаетесь по пустому бесконечному пространству с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
+            "Просто представьте: вы скитаетесь по пустому бесконечному пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
             "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
             "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
             "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
@@ -322,9 +331,14 @@
         let currentIndex = 0;
         let isTyping = false;
         let typingInterval = null;
-        let choiceMade = false;      // Была ли уже нажата кнопка выбора
-        let pendingResult = null;    // Очередь текстов после выбора (для последовательного вывода по клику)
+        let choiceMade = false;
+        let pendingResult = null;
+        let currentTypingText = '';
         const container = document.getElementById('game-container');
+
+        // --- Точка отката ---
+        let rollbackCheckpoint = null;  // { choiceIndex, containerChildCount }
+        const rollbackBtn = document.getElementById('rollback-btn');
 
         // --- Логика меню ---
         const overlay = document.getElementById('overlay');
@@ -367,6 +381,38 @@
                 root.style.setProperty('--topbar-bg', 'rgba(255, 255, 255, 0.8)');
                 root.style.setProperty('--topbar-border', 'rgba(0, 0, 0, 0.3)');
             }
+        });
+
+        // --- Логика отката ---
+        rollbackBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!rollbackCheckpoint) return;
+
+            // Останавливаем печать, если идёт
+            if (isTyping) {
+                clearInterval(typingInterval);
+                isTyping = false;
+            }
+
+            // Очищаем очередь результатов выбора
+            pendingResult = null;
+            choiceMade = false;
+
+            // Удаляем все элементы после чекпоинта
+            const keepCount = rollbackCheckpoint.containerChildCount;
+            while (container.children.length > keepCount) {
+                container.removeChild(container.lastChild);
+            }
+
+            // Возвращаем currentIndex к точке выбора
+            currentIndex = rollbackCheckpoint.choiceIndex;
+
+            // Заново показываем кнопки выбора
+            const choiceObj = paragraphs[currentIndex];
+            showChoice(choiceObj);
+
+            // Закрываем меню
+            overlay.classList.remove('active');
         });
 
         // --- Логика музыки ---
@@ -431,13 +477,10 @@
             clearInterval(typingInterval);
             const lastP = container.lastElementChild;
             if (lastP && lastP.classList.contains('paragraph')) {
-                // Восстанавливаем полный текст последнего абзаца
                 lastP.textContent = currentTypingText;
             }
             isTyping = false;
         }
-
-        let currentTypingText = '';
 
         function typeParagraphTracked(text) {
             currentTypingText = text;
@@ -446,10 +489,18 @@
 
         // --- Отрисовка кнопок выбора ---
         function showChoice(choiceObj) {
+            // Сохраняем точку отката: сколько элементов в контейнере сейчас
+            // и индекс самого выбора в массиве
+            rollbackCheckpoint = {
+                choiceIndex: currentIndex,
+                containerChildCount: container.children.length
+            };
+            rollbackBtn.disabled = false;
+
             const choiceBlock = document.createElement('div');
             choiceBlock.className = 'choice-block';
 
-            choiceObj.options.forEach((option, optIndex) => {
+            choiceObj.options.forEach((option) => {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
                 btn.textContent = option.label;
@@ -479,20 +530,17 @@
         document.body.addEventListener('click', () => {
             if (overlay.classList.contains('active')) return;
 
-            // Если идёт печать — пропускаем
             if (isTyping) {
                 skipTyping();
                 return;
             }
 
-            // Если есть текст в очереди после выбора — выводим следующий
             if (pendingResult && pendingResult.length > 0) {
                 const nextText = pendingResult.shift();
                 typeParagraphTracked(nextText);
                 return;
             }
 
-            // Обычный линейный вывод
             if (currentIndex < paragraphs.length) {
                 const item = paragraphs[currentIndex];
 
@@ -508,4 +556,3 @@
     </script>
 </body>
 </html>
-
