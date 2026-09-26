@@ -68,7 +68,6 @@
             color: var(--bg-color);
         }
 
-        /* Модальное окно (меню) */
         .overlay {
             position: fixed;
             top: 0;
@@ -151,7 +150,6 @@
             line-height: 1;
         }
 
-        /* Блок управления музыкой */
         .music-control {
             display: flex;
             flex-direction: column;
@@ -227,7 +225,6 @@
             animation: blink 0.8s step-end infinite;
         }
 
-        /* Кнопки выбора */
         .choice-block {
             display: flex;
             gap: 20px;
@@ -267,7 +264,7 @@
         <button id="menu-btn">Меню</button>
     </div>
 
-    <!-- Затемнение и модальное окно -->
+    <!-- Затемнение и модальное окно (МЕНЮ) -->
     <div class="overlay" id="overlay">
         <div class="modal">
             <button id="close-menu">&times;</button>
@@ -284,6 +281,17 @@
         </div>
     </div>
 
+    <!-- Затемнение и модальное окно (ОБ ИГРЕ) -->
+    <div class="overlay" id="intro-overlay">
+        <div class="modal">
+            <h2>Об игре</h2>
+            <p style="margin-bottom: 24px; font-size: 16px;">
+                Данная текстовая игра имеет направление на сюжетную составляющую с возможностью выбора варианта развития событий, влияющих на конечный результат. Проникнитесь таинственной историей, которую прожил главный герой и получите те же эмоции, что и он. Удачи!
+            </p>
+            <button class="btn-control" id="intro-close">Понятно</button>
+        </div>
+    </div>
+
     <div id="title-block">
         <hr class="title-line">
         <div id="title">JUST REMEMBER</div>
@@ -297,7 +305,6 @@
     </audio>
 
     <!-- Аудио-элемент для звука клика -->
-    <!-- Замени src на имя своего файла, например "click.mp3" -->
     <audio id="click-sound" preload="auto">
         <source src="click.mp3" type="audio/mpeg">
     </audio>
@@ -305,7 +312,7 @@
     <script>
         // --- Структура сюжета ---
         const paragraphs = [
-            "Просто представьте: вы скитаетесь по пустому бесконечном пространстве с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
+            "Просто представьте: вы скитаетесь по пустому бесконечному пространству с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
             "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
             "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
             "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
@@ -354,14 +361,12 @@
         const volumeSlider = document.getElementById('volume-slider');
         let musicPlaying = false;
 
-        // Устанавливаем начальную громкость для обоих звуков
         bgMusic.volume = 0.5;
         clickSound.volume = 0.5;
 
-        // --- Функция воспроизведения звука клика ---
         function playClick() {
-            if (!musicPlaying) return; // Если звук выключен — не играем
-            clickSound.currentTime = 0; // Сбрасываем к началу для быстрого повторного клика
+            if (!musicPlaying) return;
+            clickSound.currentTime = 0;
             clickSound.play().catch(() => {});
         }
 
@@ -385,6 +390,36 @@
             if (e.target === overlay) {
                 overlay.classList.remove('active');
             }
+        });
+
+        // --- Окно «Об игре» (единоразовый показ) ---
+        const introOverlay = document.getElementById('intro-overlay');
+        const introCloseBtn = document.getElementById('intro-close');
+
+        if (!localStorage.getItem('just_remember_intro_shown')) {
+            setTimeout(() => {
+                introOverlay.classList.add('active');
+            }, 500);
+        } else {
+            introOverlay.style.display = 'none';
+        }
+
+        introCloseBtn.addEventListener('click', () => {
+            playClick();
+            localStorage.setItem('just_remember_intro_shown', 'true');
+            introOverlay.classList.remove('active');
+        });
+
+        introOverlay.addEventListener('click', (e) => {
+            if (e.target === introOverlay) {
+                playClick();
+                localStorage.setItem('just_remember_intro_shown', 'true');
+                introOverlay.classList.remove('active');
+            }
+        });
+
+        document.querySelector('.modal').addEventListener('click', (e) => {
+            e.stopPropagation();
         });
 
         // --- Переключение темы ---
@@ -461,11 +496,7 @@
             e.stopPropagation();
             const vol = volumeSlider.value / 100;
             bgMusic.volume = vol;
-            clickSound.volume = vol; // Ползунок управляет обоими звуками
-        });
-
-        document.querySelector('.modal').addEventListener('click', (e) => {
-            e.stopPropagation();
+            clickSound.volume = vol;
         });
 
         // --- Логика текста ---
@@ -537,7 +568,7 @@
                     choiceMade = true;
                     isChoiceVisible = false;
 
-                    playClick(); // Звук при нажатии на кнопку выбора
+                    playClick();
 
                     choiceBlock.remove();
                     pendingResult = option.result.slice();
@@ -554,6 +585,8 @@
         // --- Обработка клика по экрану ---
         document.body.addEventListener('click', () => {
             if (overlay.classList.contains('active')) return;
+            if (introOverlay.classList.contains('active')) return;
+
             if (isChoiceVisible) return;
 
             if (isTyping) {
