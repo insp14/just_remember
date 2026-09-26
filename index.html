@@ -217,6 +217,36 @@
             animation: blink 0.8s step-end infinite;
         }
 
+        /* Кнопки выбора */
+        .choice-block {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 24px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .choice-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 10px 24px;
+            font-family: 'DOSFont', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .choice-btn:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
         @keyframes blink {
             50% { opacity: 0; }
         }
@@ -233,7 +263,7 @@
             <button id="close-menu">&times;</button>
             <h2>Меню</h2>
             <div class="controls">
-                <button class="btn-control" id="theme-toggle">Сменить тему</button>
+                <button class="btn-control" id="theme-toggle">Сменить тему (ч/б ↔ б/ч)</button>
                 <button class="btn-control" id="music-toggle">Музыка: выкл</button>
                 <div class="music-control">
                     <label for="volume-slider">Громкость</label>
@@ -251,23 +281,49 @@
     <div id="game-container"></div>
 
     <!-- Аудио-элемент для эмбиента -->
-    <!-- Замени src на имя твоего файла, например "ambient.mp3" или "ambient.ogg" -->
     <audio id="bg-music" loop preload="auto">
         <source src="ambient.mp3" type="audio/mpeg">
     </audio>
 
     <script>
+        // --- Структура сюжета ---
+        // Обычные строки — линейные абзацы
+        // Объект с type: "choice" — точка развилки
         const paragraphs = [
             "Просто представьте: вы скитаетесь по пустому бесконечному пространству с какой-то целью, но вы идете так долго, что забыли – для чего это делаете или вернее почему?",
             "В руках у Вас странный предмет, напоминающий стеклянный короб, в котором находится непонятный кусок бумаги, на котором что-то написано, но разобрать что именно – невозможно.",
             "Открыть его является непосильной задачей. Разбить – вокруг пустота и ничего более, нет ни чего-то острого, ни чего-то твердого. Все мягкое и спокойное.",
             "Кажется, то, что находится внутри – это и есть ключ к пониманию того, что тут случилось, ключ к объяснению всего происходящего. Надежда угасла уже давно.",
-            "Все дальнейшие похождения – просто привычка. Любые чувства, эмоции притупились максимально. Ни страха, ни сожаления, ни радости, ни удовлетворения. Это испытание, которое уже, казалось, было провалено."
+            "Все дальнейшие похождения – просто привычка. Любые чувства, эмоции притупились максимально. Ни страха, ни сожаления, ни радости, ни удовлетворения. Это испытание, которое уже, казалось, было провалено.",
+            "После пройденных миллионов километров по пустоте, Вы обнаруживаете выделяющееся, непохожее ни на что… (???). Вы когда-нибудь видели это?",
+            "Прошло столько времени, пропало какое-либо понимание происходящего, возникает лишь два вопроса: прикоснуться или опровергнуть? Погубит или поможет? Спасет или потревожит?",
+            "Появляется выбор, которого не было тогда, когда он был так важен. Прикосновение в ситуации с затупленными чувствами тактильности не вызывает ни капли сомнения, страха, вообще ничего.",
+            // Первая развилка
+            {
+                type: "choice",
+                options: [
+                    {
+                        label: "Прикоснуться",
+                        result: [
+                            "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги."
+                        ]
+                    },
+                    {
+                        label: "Отвергнуть",
+                        result: [
+                            "Нет. Вы больше не верите. Все угасло уже очень давно. Вы не хотите возвращаться к этому. Но что-то или кто-то с Вами не согласен и Вы чувствуете резкий толчок позади себя...",
+                            "Совершенно новое пространство. Далеко не такое пустое как предыдущее. Неизменно одно – в руках стеклянный маленький короб с таинственным куском бумаги."
+                        ]
+                    }
+                ]
+            }
         ];
 
         let currentIndex = 0;
         let isTyping = false;
         let typingInterval = null;
+        let choiceMade = false;      // Была ли уже нажата кнопка выбора
+        let pendingResult = null;    // Очередь текстов после выбора (для последовательного вывода по клику)
         const container = document.getElementById('game-container');
 
         // --- Логика меню ---
@@ -319,7 +375,6 @@
         const volumeSlider = document.getElementById('volume-slider');
         let musicPlaying = false;
 
-        // Устанавливаем начальную громкость (50% = 0.5)
         bgMusic.volume = 0.5;
 
         musicToggle.addEventListener('click', (e) => {
@@ -340,7 +395,6 @@
             bgMusic.volume = volumeSlider.value / 100;
         });
 
-        // Предотвращаем клики по ползунку и кнопкам от всплытия к body
         document.querySelector('.modal').addEventListener('click', (e) => {
             e.stopPropagation();
         });
@@ -376,22 +430,82 @@
         function skipTyping() {
             clearInterval(typingInterval);
             const lastP = container.lastElementChild;
-            if (lastP) {
-                lastP.textContent = paragraphs[currentIndex - 1];
+            if (lastP && lastP.classList.contains('paragraph')) {
+                // Восстанавливаем полный текст последнего абзаца
+                lastP.textContent = currentTypingText;
             }
             isTyping = false;
         }
 
+        let currentTypingText = '';
+
+        function typeParagraphTracked(text) {
+            currentTypingText = text;
+            typeParagraph(text);
+        }
+
+        // --- Отрисовка кнопок выбора ---
+        function showChoice(choiceObj) {
+            const choiceBlock = document.createElement('div');
+            choiceBlock.className = 'choice-block';
+
+            choiceObj.options.forEach((option, optIndex) => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = option.label;
+
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (choiceMade) return;
+                    choiceMade = true;
+
+                    // Удаляем кнопки
+                    choiceBlock.remove();
+
+                    // Ставим в очередь результаты выбранного пути
+                    pendingResult = option.result.slice();
+                    // Сразу выводим первый абзац
+                    const firstText = pendingResult.shift();
+                    typeParagraphTracked(firstText);
+                });
+
+                choiceBlock.appendChild(btn);
+            });
+
+            container.appendChild(choiceBlock);
+        }
+
+        // --- Обработка клика по экрану ---
         document.body.addEventListener('click', () => {
             if (overlay.classList.contains('active')) return;
 
+            // Если идёт печать — пропускаем
             if (isTyping) {
                 skipTyping();
-            } else if (currentIndex < paragraphs.length) {
-                typeParagraph(paragraphs[currentIndex]);
-                currentIndex++;
+                return;
+            }
+
+            // Если есть текст в очереди после выбора — выводим следующий
+            if (pendingResult && pendingResult.length > 0) {
+                const nextText = pendingResult.shift();
+                typeParagraphTracked(nextText);
+                return;
+            }
+
+            // Обычный линейный вывод
+            if (currentIndex < paragraphs.length) {
+                const item = paragraphs[currentIndex];
+
+                if (typeof item === 'string') {
+                    typeParagraphTracked(item);
+                    currentIndex++;
+                } else if (item.type === 'choice') {
+                    showChoice(item);
+                    currentIndex++;
+                }
             }
         });
     </script>
 </body>
 </html>
+
